@@ -73,6 +73,10 @@ func (h *Handler) List(c *gin.Context) {
 	pageText := c.DefaultQuery("page", "1")
 	pageSizeText := c.DefaultQuery("page_size", "10")
 	page, err := strconv.Atoi(pageText)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pagination"})
+		return
+	}
 	pageSize, err := strconv.Atoi(pageSizeText)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pagination"})
@@ -87,8 +91,8 @@ func (h *Handler) List(c *gin.Context) {
 	switch {
 	case errors.Is(err, ErrInvalidStatus),
 		errors.Is(err, ErrInvalidPagination):
-		c.JSON(http.StatusNotFound,
-			gin.H{"error": "task not found"})
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()})
 	case err != nil:
 		c.JSON(http.StatusInternalServerError,
 			gin.H{"error": "internal_error"})
