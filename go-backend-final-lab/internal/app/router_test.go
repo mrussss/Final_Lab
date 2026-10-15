@@ -7,11 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"go-backend-final-lab/internal/task"
 )
 
 // 基础测试只验证 HTTP 脚手架；业务测试由学习者在 B1–B6 编写。
 func TestHealthz(t *testing.T) {
-	router := NewRouter(filepath.Join("..", "..", "web", "index.html"))
+	router := NewRouter(filepath.Join("..", "..", "web", "index.html"), task.NewHandler(nil))
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 
@@ -33,7 +35,7 @@ func TestHealthz(t *testing.T) {
 }
 
 func TestStaticPage(t *testing.T) {
-	router := NewRouter(filepath.Join("..", "..", "web", "index.html"))
+	router := NewRouter(filepath.Join("..", "..", "web", "index.html"), task.NewHandler(nil))
 	response := httptest.NewRecorder()
 	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/", nil))
 

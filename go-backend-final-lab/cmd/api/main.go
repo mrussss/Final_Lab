@@ -55,7 +55,11 @@ func main() {
 	log.Println("Task 数据表迁移完成")
 
 	// 从项目根目录启动，静态文件路径相对于当前工作目录。
-	router := app.NewRouter("web/index.html")
+	repo := task.NewRepository(db)
+	service := task.NewService(repo)
+	handler := task.NewHandler(service)
+
+	router := app.NewRouter("web/index.html", handler)
 	log.Printf("HTTP 服务启动，端口 %s；/healthz 仅检查 HTTP 进程", port)
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("HTTP 服务启动失败: %v", err)

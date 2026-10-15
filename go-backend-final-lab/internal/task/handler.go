@@ -1,6 +1,7 @@
 package task
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,9 +9,14 @@ import (
 
 // Handler 是 HTTP 边界占位；尚未绑定 Service。
 // TODO(B1): 解析和校验请求，将业务交给 Service，把结果映射为 HTTP 响应。
-type Handler struct{}
+type Handler struct {
+	service *Service
+}
 
-func (*Handler) Create(c *gin.Context) {
+func NewHandler(service *Service) *Handler {
+	return &Handler{service: service}
+}
+func (h *Handler) Create(c *gin.Context) {
 	type CreateTaskRequest struct {
 		Title  string `json:"title"`
 		Status string `json:"status"`
@@ -21,10 +27,18 @@ func (*Handler) Create(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "invalid request"})
 		return
 	}
-	var s Service
-	Task, err := s.CreateTask(c.Request.Context(), req.Title, req.Status)
-	if 
-
+	created, err := h.service.CreateTask(
+		c.Request.Context(), req.Title, req.Status,
+	)
+	switch {
+	case errors.Is(err, ErrInvalidTitle),
+		errors.Is(err, ErrInvalidStatus):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
+	default:
+		c.JSON(http.StatusCreated, created)
+	}
 
 }
 func (*Handler) Get(c *gin.Context)    { notImplemented(c) }

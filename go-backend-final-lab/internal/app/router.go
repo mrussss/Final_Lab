@@ -11,7 +11,7 @@ import (
 
 // NewRouter 注册基础服务与占位路由。indexPath 由启动入口指定。
 // /healthz 不连接 MySQL 或 Redis，也不代表这些依赖已经就绪。
-func NewRouter(indexPath string) *gin.Engine {
+func NewRouter(indexPath string, handler *task.Handler) *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 
@@ -22,7 +22,6 @@ func NewRouter(indexPath string) *gin.Engine {
 		c.File(indexPath)
 	})
 
-	handler := &task.Handler{}
 	router.POST("/tasks", handler.Create)
 	router.GET("/tasks/:id", handler.Get)
 	router.GET("/tasks", handler.List)

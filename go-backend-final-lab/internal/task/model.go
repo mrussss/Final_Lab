@@ -8,11 +8,11 @@ import "time"
 
 // TODO(B1): 自行设计字段约束、GORM tags 和请求/响应 DTO。
 type Task struct {
-	ID         uint   `gorm:"primaryKey"`
-	Title      string `gorm:"size:255;not null"`
-	Status     string `gorm:"size:16;not null;default:pending"`
-	Created_at time.Time
-	Updated_at time.Time
+	ID        uint   `gorm:"primaryKey"`
+	Title     string `gorm:"size:255;not null"`
+	Status    string `gorm:"size:16;not null;default:pending"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // TaskEvent 的关联事件模型留给 B2。
