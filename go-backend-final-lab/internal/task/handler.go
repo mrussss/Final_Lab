@@ -3,6 +3,7 @@ package task
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,8 +42,66 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 }
-func (*Handler) Get(c *gin.Context)    { notImplemented(c) }
-func (*Handler) List(c *gin.Context)   { notImplemented(c) }
+func (h *Handler) Get(c *gin.Context) {
+	id, err := strconv.ParseUint(
+		c.Param("id"), 10, strconv.IntSize,
+	)
+
+	if err != nil || id == 0 {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": "invalid id"})
+		return
+	}
+
+	task, err := h.service.GetTask(
+		c.Request.Context(), uint(id),
+	)
+
+	switch {
+	case errors.Is(err, ErrTaskNotFound):
+		c.JSON(http.StatusNotFound,
+			gin.H{"error": "task not found"})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "internal_error"})
+	default:
+		c.JSON(http.StatusOK, task)
+	}
+}
+func (h *Handler) List(c *gin.Context) {
+	status := c.Query("status")
+	pageText := c.DefaultQuery("page", "1")
+	pageSizeText := c.DefaultQuery("page_size", "10")
+	page, err := strconv.Atoi(pageText)
+	pageSize, err := strconv.Atoi(pageSizeText)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pagination"})
+		return
+	}
+	items, err := h.service.ListTasks(
+		c.Request.Context(),
+		status,
+		page,
+		pageSize,
+	)
+	switch {
+	case errors.Is(err, ErrInvalidStatus),
+		errors.Is(err, ErrInvalidPagination):
+		c.JSON(http.StatusNotFound,
+			gin.H{"error": "task not found"})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": "internal_error"})
+	default:
+
+		c.JSON(http.StatusOK, gin.H{
+			"items":     items,
+			"page":      page,
+			"page_size": pageSize,
+		})
+	}
+
+}
 func (*Handler) Update(c *gin.Context) { notImplemented(c) }
 func (*Handler) Delete(c *gin.Context) { notImplemented(c) }
 
