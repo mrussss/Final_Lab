@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Repository 是持久化层占位，当前没有数据库连接与读写。
 var ErrTaskNotFound = errors.New("task not found")
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -74,8 +73,43 @@ func (r *Repository) List(
 	return tasks, nil
 }
 
-// TODO(B1): 根据实际调用需要设计方法，接入 GORM/MySQL，处理数据库错误。
-// TODO(B1): 实现筛选、分页和删除策略，不在 Handler 中编写 SQL。
+func (r *Repository) UpdateFields(
+	ctx context.Context,
+	id uint,
+	changes map[string]any,
+) (*Task, error) {
+	result := r.db.WithContext(ctx).
+		Model(&Task{}).
+		Where("id = ?", id).
+		Updates(changes)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf("update task: %w", result.Error)
+	}
+
+	// 再次查询：既获得最新数据，也能识别不存在的 ID。
+	return r.GetByID(ctx, id)
+}
+
+func (r *Repository) Delete(
+	ctx context.Context,
+	id uint,
+) error {
+	result := r.db.WithContext(ctx).
+		Where("id = ?", id).
+		Delete(&Task{})
+
+	if result.Error != nil {
+		return fmt.Errorf("delete task: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return ErrTaskNotFound
+	}
+
+	return nil
+}
+
 // TODO(B2): 配合 Service 实现事务关联写入与回滚验证。
 type Repository struct {
 	db *gorm.DB

@@ -8,8 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Handler 是 HTTP 边界占位；尚未绑定 Service。
-// TODO(B1): 解析和校验请求，将业务交给 Service，把结果映射为 HTTP 响应。
 type Handler struct {
 	service *Service
 }
@@ -40,7 +38,6 @@ func (h *Handler) Create(c *gin.Context) {
 	default:
 		c.JSON(http.StatusCreated, created)
 	}
-
 }
 func (h *Handler) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(
@@ -106,9 +103,56 @@ func (h *Handler) List(c *gin.Context) {
 	}
 
 }
-func (*Handler) Update(c *gin.Context) { notImplemented(c) }
-func (*Handler) Delete(c *gin.Context) { notImplemented(c) }
+func (h *Handler) Update(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
+	if err != nil || id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
 
-func notImplemented(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not_implemented"})
+	var req struct {
+		Title  *string `json:"title"`
+		Status *string `json:"status"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	updated, err := h.service.UpdateTask(
+		c.Request.Context(), uint(id), req.Title, req.Status,
+	)
+
+	switch {
+	case errors.Is(err, ErrInvalidTitle),
+		errors.Is(err, ErrInvalidStatus),
+		errors.Is(err, ErrEmptyUpdate):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case errors.Is(err, ErrTaskNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
+	default:
+		c.JSON(http.StatusOK, updated)
+	}
+}
+
+func (h *Handler) Delete(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
+	if err != nil || id == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	err = h.service.DeleteTask(c.Request.Context(), uint(id))
+
+	switch {
+	case errors.Is(err, ErrTaskNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+	case err != nil:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal_error"})
+	default:
+		c.Status(http.StatusNoContent)
+	}
 }

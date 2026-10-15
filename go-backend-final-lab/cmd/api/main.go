@@ -40,13 +40,10 @@ func main() {
 	}
 	defer sqlDB.Close()
 
-	// TODO：调用 sqlDB.Ping()
 	err = sqlDB.Ping()
-	// TODO：如果 Ping 返回错误，使用 log.Fatalf 处理
 	if err != nil {
 		log.Fatalf("数据库连接失败：%v", err)
 	}
-	// TODO：如果成功，使用 log.Println 输出成功信息
 	log.Println("数据库连接成功")
 
 	if err := db.AutoMigrate(&task.Task{}); err != nil {

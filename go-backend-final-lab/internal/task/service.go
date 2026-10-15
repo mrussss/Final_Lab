@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-// Service 预留业务职责，不依赖 *gin.Context。
 var (
 	ErrInvalidTitle      = errors.New("title cannot be empty")
 	ErrInvalidStatus     = errors.New("invalid task status")
@@ -83,7 +82,43 @@ func (s *Service) ListTasks(
 	return s.repo.List(ctx, status, page, pageSize)
 }
 
-// TODO(B1): 设计业务方法、context.Context 参数与 Repository 依赖。
 // TODO(B2): 实现 PATCH 更新和事件插入的事务边界。
 // TODO(B3): 实现缓存读取、回源以及提交后的缓存失效。
-// 当前没有业务方法、数据库操作或缓存操作。
+var ErrEmptyUpdate = errors.New("no fields to update")
+
+func (s *Service) UpdateTask(
+	ctx context.Context,
+	id uint,
+	title *string,
+	status *string,
+) (*Task, error) {
+	if title == nil && status == nil {
+		return nil, ErrEmptyUpdate
+	}
+
+	changes := make(map[string]any)
+
+	if title != nil {
+		value := strings.TrimSpace(*title)
+		if value == "" {
+			return nil, ErrInvalidTitle
+		}
+		changes["title"] = value
+	}
+
+	if status != nil {
+		if *status != "pending" && *status != "done" {
+			return nil, ErrInvalidStatus
+		}
+		changes["status"] = *status
+	}
+
+	return s.repo.UpdateFields(ctx, id, changes)
+}
+
+func (s *Service) DeleteTask(
+	ctx context.Context,
+	id uint,
+) error {
+	return s.repo.Delete(ctx, id)
+}
