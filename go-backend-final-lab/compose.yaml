@@ -1,0 +1,34 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: final_lab
+      MYSQL_USER: final_lab
+      MYSQL_PASSWORD: ${LAB_MYSQL_PASSWORD:-lab_only_change_me}
+      MYSQL_ROOT_PASSWORD: ${LAB_MYSQL_ROOT_PASSWORD:-lab_root_only_change_me}
+    ports:
+      - "127.0.0.1:${LAB_MYSQL_PORT:-13306}:3306"
+    volumes:
+      - final_lab_mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'MYSQL_PWD="$${MYSQL_ROOT_PASSWORD}" mysql --host=127.0.0.1 --user=root --execute="SELECT 1" >/dev/null'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${LAB_REDIS_PORT:-16379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  final_lab_mysql_data:
