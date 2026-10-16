@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"go-backend-final-lab/internal/app"
+	"go-backend-final-lab/internal/cache"
 	"go-backend-final-lab/internal/task"
 
 	"gorm.io/driver/mysql"
@@ -55,8 +58,28 @@ func main() {
 	log.Println("Task 数据表迁移完成")
 
 	// 从项目根目录启动，静态文件路径相对于当前工作目录。
+
+	redisAddr := os.Getenv("LAB_REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "127.0.0.1:16379"
+	}
+
+	// 本地实验使用 30 秒 TTL
+	redisStore := cache.NewRedisStore(
+		redisAddr,
+		30*time.Second,
+	)
+	defer redisStore.Close()
+
+	// Redis 不可用时不终止服务
+	if err := redisStore.Ping(context.Background()); err != nil {
+		log.Printf("[cache] Redis unavailable at startup: %v", err)
+	} else {
+		log.Printf("[cache] Redis connected: %s", redisAddr)
+	}
+
 	repo := task.NewRepository(db)
-	service := task.NewService(repo)
+	service := task.NewService(repo, redisStore)
 	handler := task.NewHandler(service)
 
 	router := app.NewRouter("web/index.html", handler)
