@@ -12,4 +12,9 @@ type Task struct {
 
 // TaskEvent 的关联事件模型留给 B2。
 // TODO(B2): 定义 id、task_id、action、created_at 及关联/删除策略。
-type TaskEvent struct{}
+type TaskEvent struct {
+	ID        uint   `gorm:"primaryKey"`
+	TaskID    uint   `gorm:"not null;index"`
+	Action    string `gorm:"size:16;not null"`
+	CreatedAt time.Time
+}

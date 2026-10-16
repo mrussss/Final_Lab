@@ -113,7 +113,14 @@ func (s *Service) UpdateTask(
 		changes["status"] = *status
 	}
 
-	return s.repo.UpdateFields(ctx, id, changes)
+	updated, err := s.repo.UpdateFields(ctx, id, changes)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO(B3): 事务提交成功后，再使 Redis 缓存失效。
+
+	return updated, nil
 }
 
 func (s *Service) DeleteTask(

@@ -46,7 +46,10 @@ func main() {
 	}
 	log.Println("数据库连接成功")
 
-	if err := db.AutoMigrate(&task.Task{}); err != nil {
+	if err := db.AutoMigrate(
+		&task.Task{},
+		&task.TaskEvent{},
+	); err != nil {
 		log.Fatalf("数据库表迁移失败: %v", err)
 	}
 	log.Println("Task 数据表迁移完成")

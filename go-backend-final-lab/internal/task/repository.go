@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var ErrTaskNotFound = errors.New("task not found")
@@ -78,17 +79,59 @@ func (r *Repository) UpdateFields(
 	id uint,
 	changes map[string]any,
 ) (*Task, error) {
-	result := r.db.WithContext(ctx).
-		Model(&Task{}).
-		Where("id = ?", id).
-		Updates(changes)
 
-	if result.Error != nil {
-		return nil, fmt.Errorf("update task: %w", result.Error)
+	var updated Task
+
+	err := r.db.WithContext(ctx).Transaction(
+		func(tx *gorm.DB) error {
+
+			// 1. 查询 Task 并锁定目标记录
+			err := tx.Clauses(
+				clause.Locking{Strength: "UPDATE"},
+			).First(&updated, id).Error
+
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTaskNotFound
+			}
+			if err != nil {
+				return fmt.Errorf("find task: %w", err)
+			}
+
+			// 2. 更新 Task
+			if err := tx.Model(&updated).
+				Updates(changes).Error; err != nil {
+				return fmt.Errorf("update task: %w", err)
+			}
+
+			// 3. 插入操作事件
+			event := TaskEvent{
+				TaskID: id,
+				Action: "update",
+			}
+
+			if err := tx.Create(&event).Error; err != nil {
+				return fmt.Errorf("insert event: %w", err)
+			}
+
+			// 4. 在同一个事务内读取更新结果
+			if err := tx.First(&updated, id).Error; err != nil {
+				return fmt.Errorf("reload task: %w", err)
+			}
+
+			return nil
+		},
+	)
+
+	if err != nil {
+		if errors.Is(err, ErrTaskNotFound) {
+			return nil, ErrTaskNotFound
+		}
+		return nil, fmt.Errorf(
+			"update task transaction: %w", err,
+		)
 	}
 
-	// 再次查询：既获得最新数据，也能识别不存在的 ID。
-	return r.GetByID(ctx, id)
+	return &updated, nil
 }
 
 func (r *Repository) Delete(
