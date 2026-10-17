@@ -67,7 +67,7 @@ func main() {
 	// 本地实验使用 30 秒 TTL
 	redisStore := cache.NewRedisStore(
 		redisAddr,
-		30*time.Second,
+		2*time.Minute,
 	)
 	defer redisStore.Close()
 
