@@ -1,22 +1,95 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Go Backend Final Lab</title>
-  </head>
-  <body>
-    <main>
-      <h1>Go Backend Final Lab</h1>
-      <p>当前仅为静态框架。B4 阶段由学习者编写 JavaScript 联调。</p>
-      <form id="create-task-form">
-        <label for="task-title">任务标题</label>
-        <input id="task-title" name="title" type="text" placeholder="输入任务标题">
-        <button type="button" disabled>创建任务（B4 实现）</button>
-      </form>
-      <h2>任务列表</h2>
-      <div id="task-list">任务列表尚未接入 API。</div>
-      <div id="error-message" role="alert" aria-live="polite"></div>
-    </main>
-  </body>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Go Backend Final Lab</title>
+</head>
+
+<body>
+  <main>
+    <h1>Go Backend Final Lab</h1>
+
+    <h2>创建任务</h2>
+    <form id="create-task-form">
+      <input id="task-title" placeholder="输入任务标题">
+      <button type="submit">创建任务</button>
+    </form>
+
+    <p id="error-message" role="alert"></p>
+
+    <h2>任务列表</h2>
+    <ul id="task-list"></ul>
+  </main>
+
+  <script>
+    const form = document.getElementById("create-task-form");
+    const titleInput = document.getElementById("task-title");
+    const taskList = document.getElementById("task-list");
+    const errorMessage = document.getElementById("error-message");
+
+    // 获取任务列表
+    async function loadTasks() {
+      try {
+        const response = await fetch("/tasks?page=1&page_size=10");
+
+        if (!response.ok) {
+          throw new Error(`GET failed: HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        taskList.replaceChildren();
+
+        if (data.items.length === 0) {
+          taskList.textContent = "暂无任务";
+          return;
+        }
+
+        for (const task of data.items) {
+          const li = document.createElement("li");
+          li.textContent =
+            `#${task.id} ${task.title} [${task.status}]`;
+          taskList.appendChild(li);
+        }
+      } catch (err) {
+        errorMessage.textContent = err.message;
+      }
+    }
+
+    // 提交创建表单
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorMessage.textContent = "";
+
+      try {
+        const response = await fetch("/tasks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            title: titleInput.value
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        titleInput.value = "";
+        await loadTasks();
+      } catch (err) {
+        errorMessage.textContent = err.message;
+      }
+    });
+
+    // 页面加载后首次读取任务
+    loadTasks();
+  </script>
+</body>
+
 </html>

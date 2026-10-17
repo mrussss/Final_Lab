@@ -30,5 +30,28 @@ services:
       timeout: 3s
       retries: 5
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "127.0.0.1:18080:8080"
+
+    environment:
+      HTTP_PORT: "8080"
+
+      LAB_MYSQL_HOST: mysql
+      LAB_MYSQL_PORT: "3306"
+      LAB_MYSQL_DATABASE: final_lab
+      LAB_MYSQL_USER: final_lab
+      LAB_MYSQL_PASSWORD: ${LAB_MYSQL_PASSWORD:-lab_only_change_me}
+
+      LAB_REDIS_ADDR: redis:6379
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
 volumes:
   final_lab_mysql_data:
