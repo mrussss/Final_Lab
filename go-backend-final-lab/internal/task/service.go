@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"unicode/utf8"
 )
 
 var (
-	ErrInvalidTitle      = errors.New("title cannot be empty")
+	ErrInvalidTitle      = errors.New("title cannot be empty or length greater than 100")
 	ErrInvalidStatus     = errors.New("invalid task status")
 	ErrInvalidPagination = errors.New("invalid pagination")
 )
@@ -44,7 +45,7 @@ func (s *Service) CreateTask(
 ) (*Task, error) {
 
 	title = strings.TrimSpace(title)
-	if title == "" {
+	if title == "" || utf8.RuneCountInString(title) > 100 {
 		return nil, ErrInvalidTitle
 	}
 
@@ -182,7 +183,7 @@ func (s *Service) UpdateTask(
 
 	if title != nil {
 		value := strings.TrimSpace(*title)
-		if value == "" {
+		if value == "" || utf8.RuneCountInString(value) > 100 {
 			return nil, ErrInvalidTitle
 		}
 		changes["title"] = value
